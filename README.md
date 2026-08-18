@@ -84,9 +84,15 @@ Add your server-side key:
 
 ```env
 OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5.6
+OPENAI_MODEL=gpt-4o
 PORT=3000
 ```
+
+> **Model note:** `OPENAI_MODEL` must be a real multimodal model your OpenAI
+> account can access (defaults to `gpt-4o`; `gpt-4.1` also works). The original
+> v0.3 handoff referenced `gpt-5.6`, which is not a live model and returns a
+> `502` from the API. Change `OPENAI_MODEL` only to another model that supports
+> the Responses API with strict `json_schema` structured output.
 
 Restart:
 
@@ -120,7 +126,9 @@ This starter intentionally has no third-party runtime packages and no cloud data
 
 ## Main files
 
-- `server.mjs` — static server, demo data, `/api/status`, `/api/analyze`, `/api/verify`, prompts, schemas, and live API calls
+- `server.mjs` — static server, demo data, `/health`, `/api/status`, `/api/analyze`, `/api/verify`, prompts, schemas, live API calls (with retry), and the exported `handleAnalyze`/`handleVerify`/`getStatus` handlers shared with the Vercel functions
+- `api/*.mjs` — Vercel serverless functions that reuse the shared handlers
+- `vercel.json` / `railway.json` / `render.yaml` — per-host deployment config
 - `public/index.html` — five-stage field workflow
 - `public/app.js` — intake, image preparation, analysis rendering, annotated PNG export, and recent-job history
 - `public/job-mode.js` — marker review, coordinate correction, step checks, after-photo verification, invoice, signature, closeout, report, and evaluation export
@@ -160,6 +168,59 @@ The command walks the Ford Flex demo through analysis, marker correction, comple
 docker build -t fixsight .
 docker run --rm -p 3000:3000 -e OPENAI_API_KEY=your_key_here fixsight
 ```
+
+## Deployment
+
+FixSight ships with config for two hosts. The same code runs on both:
+
+- **Railway / Render / Fly / any Node or Docker host** — runs `server.mjs`
+  directly as a persistent HTTP server. **Recommended** (a single AI call takes
+  ~15–30s, which suits a long-lived server better than serverless).
+- **Vercel** — the `api/*.mjs` serverless functions in `/api` reuse the exact
+  same `handleAnalyze` / `handleVerify` logic from `server.mjs`; `public/` is
+  served as static files. `vercel.json` sets `maxDuration: 60` and security
+  headers.
+
+Confirm live vs demo at `GET /api/status` → `{"mode":"live"}` once the key is set
+(`{"mode":"demo"}` otherwise). Health check: `GET /health`.
+
+### Environment variables (set as host secrets — never commit)
+
+| Variable | Required | Value |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | for live mode | your server-side OpenAI key |
+| `OPENAI_MODEL` | no | `gpt-4o` (default) or another multimodal Responses-API model |
+| `PORT` | no | injected by the host; server reads it automatically |
+| `HOST` | no | defaults to `0.0.0.0` (all interfaces) |
+
+### Railway (recommended)
+
+1. Push this repo to GitHub.
+2. Railway → **New Project → Deploy from GitHub repo** → pick this repo.
+   `railway.json` selects the Dockerfile build and `/health` health check.
+3. **Variables** tab → add `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`).
+4. Railway builds, deploys, and gives a public `*.up.railway.app` URL. Pushes to
+   the default branch auto-deploy.
+- **Redeploy/rollback:** Deployments tab → redeploy or roll back to any prior build.
+- **Logs:** Deployments tab → the live log stream.
+
+### Vercel
+
+1. Push this repo to GitHub.
+2. Vercel → **Add New → Project → Import** this repo. Framework preset: **Other**
+   (zero-config: static `public/` + `/api` functions).
+3. **Settings → Environment Variables** → add `OPENAI_API_KEY` (and optionally
+   `OPENAI_MODEL`) for Production.
+4. Deploy → public `*.vercel.app` URL. Pushes auto-deploy; PRs get previews.
+- **Redeploy/rollback:** Deployments tab → Promote/Redeploy any deployment.
+- **Logs:** the function's Runtime Logs.
+- **Note:** the browser compresses photos to ~1800px JPEG before upload, so
+  requests stay well under Vercel's 4.5 MB body limit.
+
+### Render (Blueprint)
+
+`render.yaml` defines a Docker web service with a `/health` check. Render →
+**New → Blueprint** → point at the repo → set `OPENAI_API_KEY` as a secret.
 
 ## Prototype data behavior
 

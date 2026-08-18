@@ -2,7 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -650,99 +650,9 @@ const server = http.createServer(async (req, res) => {
       } catch {
         return sendJson(res, 400, { error: "Request body must be valid JSON." });
       }
-
-      const validationError = validateAnalyzePayload(payload);
-      if (validationError) {
-        return sendJson(res, 400, { error: validationError });
-      }
-
-      if (!OPENAI_API_KEY) {
-        await sleep(650);
-        return sendJson(res, 200, {
-          analysis: selectDemoAnalysis(payload),
-          demo_mode: true,
-          model: "built-in demo",
-          response_id: null
-        });
-      }
-
-      const userPrompt = buildUserPrompt(payload);
-      const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: OPENAI_MODEL,
-          input: [
-            {
-              role: "system",
-              content: [
-                {
-                  type: "input_text",
-                  text: SYSTEM_PROMPT
-                }
-              ]
-            },
-            {
-              role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: userPrompt
-                },
-                {
-                  type: "input_image",
-                  image_url: payload.imageDataUrl,
-                  detail: "high"
-                }
-              ]
-            }
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "fixsight_repair_visual_guide",
-              strict: true,
-              schema: REPAIR_SCHEMA
-            }
-          },
-          max_output_tokens: 5000
-        })
-      });
-
-      const openaiPayload = await openaiResponse.json().catch(() => ({}));
-      if (!openaiResponse.ok) {
-        const message = openaiPayload?.error?.message || "The AI analysis request failed.";
-        return sendJson(res, 502, { error: message });
-      }
-
-      const refusal = extractRefusal(openaiPayload);
-      if (refusal) {
-        return sendJson(res, 422, { error: refusal });
-      }
-
-      const outputText = extractOutputText(openaiPayload);
-      if (!outputText) {
-        return sendJson(res, 502, { error: "The model returned no structured analysis." });
-      }
-
-      let analysis;
-      try {
-        analysis = JSON.parse(outputText);
-      } catch {
-        return sendJson(res, 502, { error: "The model response could not be parsed as JSON." });
-      }
-
-      return sendJson(res, 200, {
-        analysis,
-        demo_mode: false,
-        model: OPENAI_MODEL,
-        response_id: openaiPayload.id || null
-      });
+      const result = await handleAnalyze(payload);
+      return sendJson(res, result.status, result.body);
     }
-
 
     if (requestUrl.pathname === "/api/verify" && req.method === "POST") {
       const raw = await readBody(req, MAX_BODY_BYTES);
@@ -752,76 +662,8 @@ const server = http.createServer(async (req, res) => {
       } catch {
         return sendJson(res, 400, { error: "Request body must be valid JSON." });
       }
-
-      const validationError = validateVerificationPayload(payload);
-      if (validationError) return sendJson(res, 400, { error: validationError });
-
-      if (!OPENAI_API_KEY) {
-        await sleep(650);
-        return sendJson(res, 200, {
-          verification: selectDemoVerification(payload),
-          demo_mode: true,
-          model: "built-in demo",
-          response_id: null
-        });
-      }
-
-      const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: OPENAI_MODEL,
-          input: [
-            {
-              role: "system",
-              content: [{ type: "input_text", text: VERIFICATION_SYSTEM_PROMPT }]
-            },
-            {
-              role: "user",
-              content: [
-                { type: "input_text", text: buildVerificationPrompt(payload) },
-                { type: "input_image", image_url: payload.beforeImageDataUrl, detail: "high" },
-                { type: "input_image", image_url: payload.afterImageDataUrl, detail: "high" }
-              ]
-            }
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "fixsight_completion_verification",
-              strict: true,
-              schema: VERIFICATION_SCHEMA
-            }
-          },
-          max_output_tokens: 4200
-        })
-      });
-
-      const openaiPayload = await openaiResponse.json().catch(() => ({}));
-      if (!openaiResponse.ok) {
-        return sendJson(res, 502, { error: openaiPayload?.error?.message || "The completion verification request failed." });
-      }
-      const refusal = extractRefusal(openaiPayload);
-      if (refusal) return sendJson(res, 422, { error: refusal });
-      const outputText = extractOutputText(openaiPayload);
-      if (!outputText) return sendJson(res, 502, { error: "The model returned no structured verification." });
-
-      let verification;
-      try {
-        verification = JSON.parse(outputText);
-      } catch {
-        return sendJson(res, 502, { error: "The model verification could not be parsed as JSON." });
-      }
-
-      return sendJson(res, 200, {
-        verification,
-        demo_mode: false,
-        model: OPENAI_MODEL,
-        response_id: openaiPayload.id || null
-      });
+      const result = await handleVerify(payload);
+      return sendJson(res, result.status, result.body);
     }
 
     if (requestUrl.pathname.startsWith("/api/")) {
@@ -843,10 +685,176 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`FixSight ${APP_VERSION} listening on ${HOST}:${PORT}`);
-  console.log(OPENAI_API_KEY ? `Live AI mode: ${OPENAI_MODEL}` : "Demo mode: add OPENAI_API_KEY to .env for live analysis");
-});
+// Only start the HTTP listener when run directly (node server.mjs). When this
+// module is imported (e.g. by the Vercel serverless functions in /api that
+// reuse handleAnalyze / handleVerify), importing must have no side effects.
+const isMainModule = process.argv[1]
+  && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMainModule) {
+  server.listen(PORT, HOST, () => {
+    console.log(`FixSight ${APP_VERSION} listening on ${HOST}:${PORT}`);
+    console.log(OPENAI_API_KEY ? `Live AI mode: ${OPENAI_MODEL}` : "Demo mode: add OPENAI_API_KEY to .env for live analysis");
+  });
+}
+
+// --- Shared request handlers (used by the HTTP server above and the Vercel
+// serverless functions in /api). Each returns { status, body } instead of
+// touching the response directly, so the same logic serves both hosts. ---
+
+export function getStatus({ apiKey = OPENAI_API_KEY, model = OPENAI_MODEL } = {}) {
+  return {
+    apiConfigured: Boolean(apiKey),
+    model,
+    mode: apiKey ? "live" : "demo"
+  };
+}
+
+export async function handleAnalyze(payload, { apiKey = OPENAI_API_KEY, model = OPENAI_MODEL } = {}) {
+  const validationError = validateAnalyzePayload(payload);
+  if (validationError) return { status: 400, body: { error: validationError } };
+
+  if (!apiKey) {
+    return {
+      status: 200,
+      body: { analysis: selectDemoAnalysis(payload), demo_mode: true, model: "built-in demo", response_id: null }
+    };
+  }
+
+  const requestBody = {
+    model,
+    input: [
+      { role: "system", content: [{ type: "input_text", text: SYSTEM_PROMPT }] },
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: buildUserPrompt(payload) },
+          { type: "input_image", image_url: payload.imageDataUrl, detail: "high" }
+        ]
+      }
+    ],
+    text: {
+      format: { type: "json_schema", name: "fixsight_repair_visual_guide", strict: true, schema: REPAIR_SCHEMA }
+    },
+    max_output_tokens: 5000
+  };
+
+  let openaiResponse, openaiPayload;
+  try {
+    ({ response: openaiResponse, payload: openaiPayload } = await callOpenAI(apiKey, requestBody));
+  } catch (error) {
+    console.error("OpenAI analyze request failed:", error?.message || error);
+    return { status: 502, body: { error: "The AI analysis service is unavailable. Please try again." } };
+  }
+
+  if (!openaiResponse.ok) {
+    return { status: 502, body: { error: openaiPayload?.error?.message || "The AI analysis request failed." } };
+  }
+  const refusal = extractRefusal(openaiPayload);
+  if (refusal) return { status: 422, body: { error: refusal } };
+  const outputText = extractOutputText(openaiPayload);
+  if (!outputText) return { status: 502, body: { error: "The model returned no structured analysis." } };
+
+  let analysis;
+  try {
+    analysis = JSON.parse(outputText);
+  } catch {
+    return { status: 502, body: { error: "The model response could not be parsed as JSON." } };
+  }
+
+  return {
+    status: 200,
+    body: { analysis, demo_mode: false, model, response_id: openaiPayload.id || null }
+  };
+}
+
+export async function handleVerify(payload, { apiKey = OPENAI_API_KEY, model = OPENAI_MODEL } = {}) {
+  const validationError = validateVerificationPayload(payload);
+  if (validationError) return { status: 400, body: { error: validationError } };
+
+  if (!apiKey) {
+    return {
+      status: 200,
+      body: { verification: selectDemoVerification(payload), demo_mode: true, model: "built-in demo", response_id: null }
+    };
+  }
+
+  const requestBody = {
+    model,
+    input: [
+      { role: "system", content: [{ type: "input_text", text: VERIFICATION_SYSTEM_PROMPT }] },
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: buildVerificationPrompt(payload) },
+          { type: "input_image", image_url: payload.beforeImageDataUrl, detail: "high" },
+          { type: "input_image", image_url: payload.afterImageDataUrl, detail: "high" }
+        ]
+      }
+    ],
+    text: {
+      format: { type: "json_schema", name: "fixsight_completion_verification", strict: true, schema: VERIFICATION_SCHEMA }
+    },
+    max_output_tokens: 4200
+  };
+
+  let openaiResponse, openaiPayload;
+  try {
+    ({ response: openaiResponse, payload: openaiPayload } = await callOpenAI(apiKey, requestBody));
+  } catch (error) {
+    console.error("OpenAI verify request failed:", error?.message || error);
+    return { status: 502, body: { error: "The completion verification service is unavailable. Please try again." } };
+  }
+
+  if (!openaiResponse.ok) {
+    return { status: 502, body: { error: openaiPayload?.error?.message || "The completion verification request failed." } };
+  }
+  const refusal = extractRefusal(openaiPayload);
+  if (refusal) return { status: 422, body: { error: refusal } };
+  const outputText = extractOutputText(openaiPayload);
+  if (!outputText) return { status: 502, body: { error: "The model returned no structured verification." } };
+
+  let verification;
+  try {
+    verification = JSON.parse(outputText);
+  } catch {
+    return { status: 502, body: { error: "The model verification could not be parsed as JSON." } };
+  }
+
+  return {
+    status: 200,
+    body: { verification, demo_mode: false, model, response_id: openaiPayload.id || null }
+  };
+}
+
+// Call the OpenAI Responses API with a short retry on transient failures
+// (429 / 5xx / network errors). The API occasionally returns a 502 with a
+// request id that succeeds immediately on retry.
+async function callOpenAI(apiKey, requestBody, { retries = 2 } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify(requestBody)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if ((response.status === 429 || response.status >= 500) && attempt < retries) {
+        await sleep(700 * (attempt + 1));
+        continue;
+      }
+      return { response, payload };
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        await sleep(700 * (attempt + 1));
+        continue;
+      }
+    }
+  }
+  throw lastError || new Error("OpenAI request failed after retries.");
+}
 
 function selectDemoAnalysis(payload) {
   const text = `${payload.year || ""} ${payload.make || ""} ${payload.model || ""} ${payload.concern || ""} ${payload.quickQuestion || ""}`.toLowerCase();
