@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+node_modules
+npm-debug.log
+*.log
+docs
+tests
+scripts
+preview
+README.md
+FIXSIGHT_CLAUDE_CODE_DEPLOYMENT_HANDOFF.md

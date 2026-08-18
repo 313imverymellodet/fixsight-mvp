@@ -1,0 +1,22 @@
+# Render Blueprint for FixSight v0.3
+# Deploy: push this repo to GitHub, then in Render choose
+# "New +" -> "Blueprint" and point it at this repository.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: fixsight
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Set the actual secret in the Render dashboard (Environment tab) or mark it
+      # synced. Never commit the real key.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o
+      # Render injects PORT automatically; the server reads it from the environment.
+      - key: NODE_ENV
+        value: production

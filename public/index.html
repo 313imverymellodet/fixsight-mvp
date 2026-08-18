@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6c94c">
+  <meta name="description" content="FixSight turns repair photos into visual triage guides, annotations, steps, safety checks, and quote ranges.">
+  <title>FixSight - Visual Repair Triage</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+  <script src="/job-mode.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="FixSight home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img">
+            <path d="M5 24C10.2 14.1 16.5 9 24 9s13.8 5.1 19 15c-5.2 9.9-11.5 15-19 15S10.2 33.9 5 24Z" fill="none" stroke="currentColor" stroke-width="3.6"/>
+            <circle cx="24" cy="24" r="7" fill="currentColor"/>
+          </svg>
+        </span>
+        <span>
+          <strong>FixSight</strong>
+          <small>See the job. Mark the fix.</small>
+        </span>
+      </a>
+      <div class="topbar-actions">
+        <span id="modeBadge" class="mode-badge is-loading">
+          <span class="status-dot"></span>
+          Checking mode
+        </span>
+        <button id="newJobButton" class="button button-ghost button-small" type="button">New job</button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">Visual triage for mechanics and mobile technicians</span>
+          <h1>From first photo to verified repair report.</h1>
+          <p>Capture the before photo, review every AI marker, complete the work, verify an after photo, and close the job with a customer-ready invoice and service report.</p>
+          <div class="hero-pills" aria-label="Product capabilities">
+            <span>Photo markup</span>
+            <span>Safety classification</span>
+            <span>Field steps</span>
+            <span>Quote guidance</span>
+            <span>Before / after verification</span>
+            <span>Invoice closeout</span>
+          </div>
+        </div>
+        <aside class="hero-proof" aria-label="Golden test case">
+          <span class="proof-label">Golden test case</span>
+          <strong>Field test library</strong>
+          <p>Use real jobs to test the visual workflow before going live.</p>
+          <div class="sample-actions">
+            <button id="loadSampleButton" class="text-button" type="button">Equinox exhaust <span aria-hidden="true">→</span></button>
+            <button id="loadBatterySampleButton" class="text-button" type="button">Ford Flex battery <span aria-hidden="true">→</span></button>
+          </div>
+        </aside>
+      </section>
+
+      <nav id="jobProgress" class="job-progress" aria-label="Job workflow progress">
+        <button class="job-progress-step is-active" type="button" data-target="jobForm">
+          <span>1</span><strong>Intake</strong><small>Vehicle + before photo</small>
+        </button>
+        <button class="job-progress-step" type="button" data-target="resultsSection">
+          <span>2</span><strong>Guide</strong><small>AI visual triage</small>
+        </button>
+        <button class="job-progress-step" type="button" data-target="markerReviewPanel">
+          <span>3</span><strong>Review</strong><small>Verify every marker</small>
+        </button>
+        <button class="job-progress-step" type="button" data-target="completionSection">
+          <span>4</span><strong>After check</strong><small>Completion verification</small>
+        </button>
+        <button class="job-progress-step" type="button" data-target="closeoutSection">
+          <span>5</span><strong>Closeout</strong><small>Invoice + report</small>
+        </button>
+      </nav>
+
+      <section class="builder-grid" aria-label="FixSight job builder">
+        <form id="jobForm" class="panel form-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="section-kicker">Step 1</span>
+              <h2>Describe the job</h2>
+            </div>
+            <span class="required-note">* Required</span>
+          </div>
+
+          <details class="job-details" open>
+            <summary>Business, technician, and customer details</summary>
+            <div class="job-details-body">
+              <div class="field-grid field-grid-two">
+                <label class="field">
+                  <span>Business / shop</span>
+                  <input id="shopNameInput" name="shopName" placeholder="Mello 24/7 Car Service">
+                </label>
+                <label class="field">
+                  <span>Technician</span>
+                  <input id="technicianNameInput" name="technicianName" autocomplete="name" placeholder="Technician name">
+                </label>
+              </div>
+              <div class="field-grid field-grid-two">
+                <label class="field">
+                  <span>Customer name</span>
+                  <input id="customerNameInput" name="customerName" autocomplete="name" placeholder="Customer name">
+                </label>
+                <label class="field">
+                  <span>Customer phone</span>
+                  <input id="customerPhoneInput" name="customerPhone" inputmode="tel" autocomplete="tel" placeholder="(313) 555-0100">
+                </label>
+              </div>
+              <div class="field-grid field-grid-two">
+                <label class="field">
+                  <span>Customer email</span>
+                  <input id="customerEmailInput" name="customerEmail" type="email" autocomplete="email" placeholder="customer@example.com">
+                </label>
+                <label class="field">
+                  <span>Service address</span>
+                  <input id="serviceAddressInput" name="serviceAddress" autocomplete="street-address" placeholder="Service location">
+                </label>
+              </div>
+              <div class="field-grid field-grid-two">
+                <label class="field">
+                  <span>VIN / plate</span>
+                  <input id="vinInput" name="vin" placeholder="Optional identifier">
+                </label>
+                <label class="field">
+                  <span>Odometer</span>
+                  <input id="odometerInput" name="odometer" inputmode="numeric" placeholder="Optional mileage">
+                </label>
+              </div>
+            </div>
+          </details>
+
+          <div class="field-grid field-grid-four">
+            <label class="field">
+              <span>Year</span>
+              <input id="yearInput" name="year" inputmode="numeric" maxlength="4" placeholder="2015">
+            </label>
+            <label class="field">
+              <span>Make</span>
+              <input id="makeInput" name="make" autocomplete="organization" placeholder="Chevrolet">
+            </label>
+            <label class="field">
+              <span>Model</span>
+              <input id="modelInput" name="model" placeholder="Equinox">
+            </label>
+            <label class="field">
+              <span>Engine</span>
+              <input id="engineInput" name="engine" placeholder="Optional">
+            </label>
+          </div>
+
+          <div class="field-grid field-grid-two">
+            <label class="field">
+              <span>Task mode</span>
+              <select id="taskModeInput" name="taskMode">
+                <option value="Diagnose / inspect">Diagnose / inspect</option>
+                <option value="Replace component">Replace component</option>
+                <option value="Temporary roadside stabilization">Temporary roadside stabilization</option>
+                <option value="Identify fastener or tool">Identify fastener or tool</option>
+                <option value="Verify install order">Verify install order</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Service area</span>
+              <input id="marketInput" name="market" placeholder="Detroit, MI" value="Detroit, MI">
+            </label>
+          </div>
+
+          <div class="field-grid field-grid-two">
+            <label class="field">
+              <span>Service context</span>
+              <select id="contextInput" name="serviceContext">
+                <option value="Mobile roadside service">Mobile roadside service</option>
+                <option value="Repair shop">Repair shop</option>
+                <option value="Fleet service">Fleet service</option>
+                <option value="Pre-purchase inspection">Pre-purchase inspection</option>
+                <option value="DIY inspection">DIY inspection</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>What is happening, and what do you need to do? *</span>
+            <textarea id="concernInput" name="concern" rows="4" required minlength="8" placeholder="Example: The rear exhaust is dragging. I need to secure it temporarily so the customer can reach an exhaust shop."></textarea>
+          </label>
+
+          <div class="field-grid field-grid-two">
+            <label class="field">
+              <span>Technician note</span>
+              <input id="noteInput" name="technicianNote" placeholder="Orientation, recent work, noises, fluids, or customer constraints">
+            </label>
+            <label class="field">
+              <span>Quick field question</span>
+              <input id="quickQuestionInput" name="quickQuestion" placeholder="Which nut? What socket? Positive or negative first?">
+            </label>
+          </div>
+
+          <div class="upload-section">
+            <div class="field-label-row">
+              <span>Before / diagnostic photo *</span>
+              <span id="imageMeta" class="image-meta">JPEG, PNG, or WebP</span>
+            </div>
+            <input id="photoInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp">
+            <label id="dropZone" class="drop-zone" for="photoInput">
+              <span class="drop-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48">
+                  <path d="M15 17.5 18.4 12h11.2l3.4 5.5h4.8a4.2 4.2 0 0 1 4.2 4.2v14.1a4.2 4.2 0 0 1-4.2 4.2H10.2A4.2 4.2 0 0 1 6 35.8V21.7a4.2 4.2 0 0 1 4.2-4.2H15Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+                  <circle cx="24" cy="28" r="7.5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+                </svg>
+              </span>
+              <strong>Drop a clear photo here</strong>
+              <span>or tap to choose from your device</span>
+              <small>Use a wide context photo first. Marker review can flag the exact close-up or angle still needed.</small>
+            </label>
+          </div>
+
+          <div class="consent-row">
+            <input id="safetyCheck" type="checkbox" required>
+            <label for="safetyCheck">I understand this is visual triage, not a substitute for the vehicle's service information, physical inspection, or safe lifting procedures.</label>
+          </div>
+
+          <div id="formError" class="inline-alert is-hidden" role="alert"></div>
+
+          <div class="form-actions">
+            <button id="analyzeButton" class="button button-primary" type="submit">
+              <span class="button-label">Generate visual guide</span>
+              <span class="button-loader" aria-hidden="true"></span>
+            </button>
+            <button id="clearButton" class="button button-secondary" type="button">Clear</button>
+          </div>
+          <p class="privacy-note">In this starter, photos are sent only to the app server for analysis and are not added to a database. Saved job summaries remain in this browser.</p>
+        </form>
+
+        <section class="panel workspace-panel" aria-labelledby="workspaceTitle">
+          <div class="panel-heading workspace-heading">
+            <div>
+              <span class="section-kicker">Step 2</span>
+              <h2 id="workspaceTitle">Visual workspace</h2>
+            </div>
+            <div class="workspace-actions">
+              <button id="toggleMarkersButton" class="icon-button" type="button" title="Show or hide markers" disabled>
+                <span aria-hidden="true">◎</span>
+                <span>Markers</span>
+              </button>
+              <button id="compareButton" class="icon-button" type="button" title="View reference markup" disabled>
+                <span aria-hidden="true">◫</span>
+                <span>Reference</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="imageStage" class="image-stage is-empty">
+            <div id="emptyStage" class="empty-stage">
+              <span class="empty-visual" aria-hidden="true">
+                <svg viewBox="0 0 110 84">
+                  <rect x="4" y="4" width="102" height="76" rx="10" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="7 7"/>
+                  <circle cx="38" cy="31" r="8" fill="none" stroke="currentColor" stroke-width="3"/>
+                  <path d="m15 66 25-23 16 14 13-11 26 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <strong>Your photo and markers will appear here</strong>
+              <p>Start with the Equinox example or upload your own repair photo.</p>
+            </div>
+            <img id="previewImage" alt="Uploaded vehicle repair photo">
+            <div id="annotationLayer" class="annotation-layer" aria-label="Visual repair annotations"></div>
+            <div id="scanOverlay" class="scan-overlay" aria-hidden="true">
+              <div class="scan-line"></div>
+              <span>Analyzing visible evidence</span>
+            </div>
+          </div>
+
+          <div id="annotationLegend" class="annotation-legend is-empty">
+            <div class="legend-placeholder">
+              <strong>Numbered, color-coded markers</strong>
+              <p>Markers stay tied to the image. Each one explains what to inspect, lift, avoid, support, remove, or repair.</p>
+            </div>
+          </div>
+
+          <div id="markerReviewPanel" class="marker-review-panel is-hidden">
+            <div class="marker-review-heading">
+              <div>
+                <span class="section-kicker">Technician review</span>
+                <strong>Verify every AI marker on the vehicle</strong>
+              </div>
+              <span id="markerReviewCount" class="count-badge">0 / 0 reviewed</span>
+            </div>
+            <div class="review-meter" aria-hidden="true"><span id="markerReviewMeter"></span></div>
+            <p id="markerReviewMessage">Choose Verified, Incorrect, or Need another photo on every marker. Incorrect marker locations can be repositioned on the image.</p>
+            <div class="marker-review-actions">
+              <button id="exportEvaluationButton" class="button button-ghost button-small" type="button">Export evaluation JSON</button>
+              <button id="reviewAllButton" class="button button-secondary button-small" type="button">Review marker list</button>
+            </div>
+          </div>
+
+          <div id="demoBanner" class="demo-banner is-hidden">
+            <strong>Demo response</strong>
+            <span>Add an OpenAI API key in <code>.env</code> to analyze new photos live.</span>
+          </div>
+        </section>
+      </section>
+
+      <section id="resultsSection" class="results-section is-hidden" aria-live="polite">
+        <div class="results-heading">
+          <div>
+            <span class="section-kicker">Step 3</span>
+            <h2>Field-ready guide</h2>
+            <p id="resultSubtitle">Review the visible findings, verify every marked point on the vehicle, and document the customer handoff.</p>
+          </div>
+          <div class="result-actions">
+            <button id="downloadButton" class="button button-secondary button-small" type="button">Download marked photo</button>
+            <button id="copyNoteButton" class="button button-secondary button-small" type="button">Copy customer note</button>
+            <button id="printButton" class="button button-ghost button-small" type="button">Print report</button>
+          </div>
+        </div>
+
+        <div id="summaryCards" class="summary-cards"></div>
+
+        <div class="results-grid">
+          <article class="panel result-panel result-panel-wide">
+            <div class="result-panel-heading">
+              <div>
+                <span class="section-kicker">Assessment</span>
+                <h3 id="resultTitle">Repair guide</h3>
+              </div>
+              <span id="statusPill" class="status-pill"></span>
+            </div>
+            <p id="likelyIssue" class="lead-copy"></p>
+            <div id="findingsList" class="finding-list"></div>
+          </article>
+
+          <article class="panel result-panel safety-panel">
+            <div class="result-panel-heading">
+              <div>
+                <span class="section-kicker">Safety gate</span>
+                <h3 id="safetyHeadline">Verify before work</h3>
+              </div>
+              <span id="safetyBadge" class="safety-badge"></span>
+            </div>
+            <div id="safetyReasons"></div>
+            <div id="requiredAction" class="required-action"></div>
+          </article>
+
+          <article class="panel result-panel result-panel-wide">
+            <div class="result-panel-heading">
+              <div>
+                <span class="section-kicker">Procedure</span>
+                <h3>Field steps</h3>
+              </div>
+              <span id="stepCount" class="count-badge"></span>
+            </div>
+            <div id="stepsList" class="steps-list"></div>
+          </article>
+
+          <article id="fastenersPanel" class="panel result-panel result-panel-wide is-hidden">
+            <div class="result-panel-heading">
+              <div>
+                <span class="section-kicker">Fastener map</span>
+                <h3>What to loosen, remove, or leave alone</h3>
+              </div>
+            </div>
+            <div id="fastenersList" class="fasteners-list"></div>
+          </article>
+
+          <article class="panel result-panel">
+            <div class="result-panel-heading">
+              <div>
+                <span class="section-kicker">Equipment</span>
+                <h3>Tools and materials</h3>
+              </div>
+            </div>
+            <div id="toolsList" class="tools-list"></div>
+          </article>
+
+          <article class="panel result-panel">
+            <div class="result-panel-heading">
+              <div>
+                <span class="section-kicker">Do not skip</span>
+                <h3>Warnings</h3>
+              </div>
+            </div>
+            <div id="warningsList" class="warnings-list"></div>
+          </article>
+
+          <article class="panel result-panel customer-panel result-panel-wide">
+            <div class="result-panel-heading">
+              <div>
+                <span class="section-kicker">Customer handoff</span>
+                <h3>Service note</h3>
+              </div>
+            </div>
+            <blockquote id="customerNote"></blockquote>
+          </article>
+
+          <article id="missingInfoPanel" class="panel result-panel is-hidden">
+            <div class="result-panel-heading">
+              <div>
+                <span class="section-kicker">Next photos</span>
+                <h3>Missing information</h3>
+              </div>
+            </div>
+            <div id="missingInfoList"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="jobModeSection" class="job-mode-section is-hidden" aria-live="polite">
+        <div class="results-heading">
+          <div>
+            <span class="section-kicker">FixSight Job Mode</span>
+            <h2>Verify the repair and close the job</h2>
+            <p>Pair the before guide with an after photo, capture technician checks, and create a service record the customer can understand.</p>
+          </div>
+          <span id="jobStatusBadge" class="status-pill status-needs_more_photos">In progress</span>
+        </div>
+
+        <section id="completionSection" class="panel job-mode-panel">
+          <div class="job-mode-panel-heading">
+            <div>
+              <span class="section-kicker">Step 4</span>
+              <h3>After photo and completion verification</h3>
+            </div>
+            <span id="completionStatusBadge" class="count-badge">Not verified</span>
+          </div>
+
+          <div class="before-after-grid">
+            <article class="comparison-card">
+              <div class="comparison-card-heading"><strong>Before</strong><span>Original visual guide</span></div>
+              <div class="comparison-image-frame">
+                <img id="comparisonBeforeImage" alt="Before repair photo">
+              </div>
+            </article>
+
+            <article class="comparison-card">
+              <div class="comparison-card-heading">
+                <div><strong>After</strong><span id="afterImageMeta">Add completion photo</span></div>
+                <button id="loadDemoAfterButton" class="text-button" type="button">Use demo after</button>
+              </div>
+              <input id="afterPhotoInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp">
+              <label id="afterDropZone" class="after-drop-zone" for="afterPhotoInput">
+                <span class="drop-icon" aria-hidden="true">＋</span>
+                <strong>Capture or upload the after photo</strong>
+                <small>Match the before angle when practical so visible changes can be compared.</small>
+              </label>
+              <div id="afterImageStage" class="after-image-stage is-hidden">
+                <img id="afterPreviewImage" alt="After repair photo">
+                <div id="afterAnnotationLayer" class="after-annotation-layer" aria-label="After-photo verification markers"></div>
+                <div id="afterScanOverlay" class="scan-overlay" aria-hidden="true">
+                  <div class="scan-line"></div><span>Comparing before and after</span>
+                </div>
+              </div>
+              <div id="afterAnnotationLegend" class="after-annotation-legend"></div>
+            </article>
+          </div>
+
+          <div class="completion-grid">
+            <label class="field completion-notes">
+              <span>Work performed</span>
+              <textarea id="servicePerformedInput" rows="4" placeholder="Example: Replaced the 12V battery, secured the hold-down, connected positive first and negative last, and reset the battery monitor."></textarea>
+            </label>
+            <div class="manual-checks">
+              <strong>Technician completion checks</strong>
+              <label><input id="checkWorkArea" type="checkbox"> Work area is clear of tools and loose parts</label>
+              <label><input id="checkHardware" type="checkbox"> Visible hardware / terminals / supports are secured</label>
+              <label><input id="checkHazards" type="checkbox"> No visible leak, smoke, abnormal heat, or active hazard</label>
+              <label><input id="checkHandoff" type="checkbox"> Customer limitations and next steps were explained</label>
+            </div>
+          </div>
+
+          <div id="completionError" class="inline-alert is-hidden" role="alert"></div>
+          <div class="form-actions">
+            <button id="verifyCompletionButton" class="button button-primary" type="button">
+              <span class="button-label">Verify completion</span><span class="button-loader" aria-hidden="true"></span>
+            </button>
+            <button id="clearAfterButton" class="button button-secondary" type="button">Clear after photo</button>
+          </div>
+
+          <div id="verificationResults" class="verification-results is-hidden">
+            <div class="verification-hero">
+              <div>
+                <span class="section-kicker">Visual completion check</span>
+                <h3 id="verificationHeadline">Verification result</h3>
+                <p id="verificationSummary"></p>
+              </div>
+              <span id="verificationStatusPill" class="status-pill"></span>
+            </div>
+            <div class="verification-summary-grid">
+              <article><span>Confidence</span><strong id="verificationConfidence">0%</strong></article>
+              <article><span>Release guidance</span><strong id="releaseGuidance">Not evaluated</strong></article>
+              <article><span>Manual checks</span><strong id="manualCheckCount">0 / 4</strong></article>
+            </div>
+            <div class="verification-detail-grid">
+              <article><h4>Visible changes</h4><div id="visibleChangesList"></div></article>
+              <article><h4>Verification checks</h4><div id="verificationChecksList"></div></article>
+              <article><h4>Unresolved items</h4><div id="unresolvedItemsList"></div></article>
+            </div>
+          </div>
+        </section>
+
+        <section id="closeoutSection" class="panel job-mode-panel">
+          <div class="job-mode-panel-heading">
+            <div>
+              <span class="section-kicker">Step 5</span>
+              <h3>Invoice and customer service report</h3>
+            </div>
+            <span id="invoiceTotalBadge" class="count-badge">$0.00 total</span>
+          </div>
+
+          <div class="invoice-grid">
+            <div class="invoice-form">
+              <div class="field-grid field-grid-two">
+                <label class="field"><span>Invoice number</span><input id="invoiceNumberInput"></label>
+                <label class="field"><span>Service date</span><input id="serviceDateInput" type="date"></label>
+              </div>
+              <label class="field"><span>Service description</span><textarea id="serviceDescriptionInput" rows="3" placeholder="Customer-facing description of the work performed"></textarea></label>
+
+              <div class="charge-grid">
+                <label class="field"><span>Service call</span><input id="serviceCallInput" type="number" min="0" step="0.01" value="0"></label>
+                <label class="field"><span>Labor hours</span><input id="laborHoursInput" type="number" min="0" step="0.25" value="0"></label>
+                <label class="field"><span>Labor rate</span><input id="laborRateInput" type="number" min="0" step="0.01" value="0"></label>
+                <label class="field"><span>Parts</span><input id="partsAmountInput" type="number" min="0" step="0.01" value="0"></label>
+                <label class="field"><span>Materials</span><input id="materialsAmountInput" type="number" min="0" step="0.01" value="0"></label>
+                <label class="field"><span>Discount</span><input id="discountInput" type="number" min="0" step="0.01" value="0"></label>
+                <label class="field"><span>Tax rate %</span><input id="taxRateInput" type="number" min="0" step="0.01" value="0"></label>
+                <label class="field"><span>Amount paid</span><input id="amountPaidInput" type="number" min="0" step="0.01" value="0"></label>
+              </div>
+
+              <div class="field-grid field-grid-two">
+                <label class="field">
+                  <span>Payment status</span>
+                  <select id="paymentStatusInput"><option value="unpaid">Unpaid</option><option value="paid">Paid</option><option value="partial">Partial</option><option value="waived">Waived</option></select>
+                </label>
+                <label class="field">
+                  <span>Payment method</span>
+                  <select id="paymentMethodInput"><option value="not_recorded">Not recorded</option><option value="cash">Cash</option><option value="card">Card</option><option value="mobile_payment">Mobile payment</option><option value="check">Check</option><option value="other">Other</option></select>
+                </label>
+              </div>
+              <label class="field"><span>Warranty / limitations / next steps</span><textarea id="limitationsInput" rows="3" placeholder="Temporary repair limitations, warranty terms, referral, or return instructions"></textarea></label>
+            </div>
+
+            <aside class="invoice-totals">
+              <div><span>Service call</span><strong id="serviceCallTotal">$0.00</strong></div>
+              <div><span>Labor</span><strong id="laborTotal">$0.00</strong></div>
+              <div><span>Parts + materials</span><strong id="partsMaterialsTotal">$0.00</strong></div>
+              <div><span>Discount</span><strong id="discountTotal">-$0.00</strong></div>
+              <div><span>Tax</span><strong id="taxTotal">$0.00</strong></div>
+              <div class="invoice-grand-total"><span>Total</span><strong id="grandTotal">$0.00</strong></div>
+              <div><span>Paid</span><strong id="paidTotal">$0.00</strong></div>
+              <div class="invoice-balance"><span>Balance</span><strong id="balanceTotal">$0.00</strong></div>
+            </aside>
+          </div>
+
+          <div class="signature-grid">
+            <div>
+              <div class="signature-heading"><strong>Customer signature</strong><button id="clearSignatureButton" class="text-button" type="button">Clear</button></div>
+              <canvas id="signatureCanvas" width="900" height="260" aria-label="Customer signature pad"></canvas>
+              <small>Sign with a finger, stylus, or mouse. A signer name and signature are required to close the job. The signature stays in this browser prototype.</small>
+            </div>
+            <div class="acknowledgment-panel">
+              <label class="field"><span>Signer name</span><input id="signerNameInput" placeholder="Customer or authorized signer"></label>
+              <label><input id="customerAcknowledgmentInput" type="checkbox"> Customer acknowledges the described work, charges, limitations, and recommended next steps.</label>
+              <label><input id="technicianSignoffInput" type="checkbox"> Technician confirms the report reflects the work performed and visible condition at handoff.</label>
+            </div>
+          </div>
+
+          <article id="serviceReportPreview" class="service-report-preview">
+            <div class="report-placeholder">Complete the job details to build the customer service report preview.</div>
+          </article>
+
+          <div id="closeoutError" class="inline-alert is-hidden" role="alert"></div>
+          <div class="closeout-actions">
+            <button id="completeJobButton" class="button button-primary" type="button">Mark job complete</button>
+            <button id="printServiceReportButton" class="button button-secondary" type="button">Print / Save PDF</button>
+            <button id="downloadServiceReportButton" class="button button-secondary" type="button">Download report HTML</button>
+            <button id="copyServiceSummaryButton" class="button button-ghost" type="button">Copy service summary</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="history-section">
+        <div class="history-heading">
+          <div>
+            <span class="section-kicker">Browser-only MVP</span>
+            <h2>Recent job summaries</h2>
+          </div>
+          <button id="clearHistoryButton" class="text-button" type="button">Clear history</button>
+        </div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+
+      <section class="guardrail-strip" aria-label="Safety guardrails">
+        <div>
+          <strong>FixSight is a visual triage layer.</strong>
+          <span>Every attachment point, fastener, lift point, and repair decision must be physically verified by a qualified person and checked against vehicle-specific service information.</span>
+        </div>
+        <span class="guardrail-tag">Human verification required</span>
+      </section>
+    </main>
+
+    <footer>
+      <span>FixSight MVP · Visual repair communication for the field</span>
+      <span>Built from real field tests: intake → visual guide → technician review → after verification → invoice</span>
+    </footer>
+  </div>
+
+  <dialog id="referenceDialog" class="reference-dialog">
+    <div class="dialog-heading">
+      <div>
+        <span class="section-kicker">Reference output</span>
+        <h2>Original marked-up example</h2>
+      </div>
+      <button id="closeReferenceButton" class="dialog-close" type="button" aria-label="Close reference">×</button>
+    </div>
+    <img id="referenceImage" src="/reference-markup.png" alt="Reference annotated repair image">
+    <p id="referenceCaption">This is the visual standard the MVP is designed to reproduce with interactive markers and a downloadable field report.</p>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
