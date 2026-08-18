@@ -2,6 +2,10 @@
 
 **See the job. Mark the fix. Verify the work. Close it out.**
 
+> **🚀 Live (public):** https://fixsight-mvp-romello-morris-projects-3c79cb47.vercel.app
+> **Host:** Vercel (team "Romello Morris' projects", Pro) · **Repo:** https://github.com/313imverymellodet/fixsight-mvp · **Mode:** live (`gpt-4o`)
+> Deployment Protection is **off** (fully public). The app has no login and uses a single server-side OpenAI key, so anyone with the URL can trigger AI calls — set an OpenAI spend limit. See [Deployment](#deployment).
+
 FixSight is a working, no-runtime-dependency web-app starter for mechanics, mobile technicians, roadside operators, fleet teams, and service advisors. It turns a repair photo and field question into an interactive visual guide, requires technician review of every AI marker, compares before/after photos, and produces a customer-ready service report with charges and signature.
 
 ## What v0.3 includes
@@ -204,18 +208,29 @@ Confirm live vs demo at `GET /api/status` → `{"mode":"live"}` once the key is 
 - **Redeploy/rollback:** Deployments tab → redeploy or roll back to any prior build.
 - **Logs:** Deployments tab → the live log stream.
 
-### Vercel
+### Vercel (currently deployed here)
+
+Already deployed at the URL above. To reproduce from scratch:
 
 1. Push this repo to GitHub.
-2. Vercel → **Add New → Project → Import** this repo. Framework preset: **Other**
-   (zero-config: static `public/` + `/api` functions).
-3. **Settings → Environment Variables** → add `OPENAI_API_KEY` (and optionally
-   `OPENAI_MODEL`) for Production.
-4. Deploy → public `*.vercel.app` URL. Pushes auto-deploy; PRs get previews.
+2. Vercel → **Add New → Project → Import** this repo. `vercel.json` pins the
+   config: `outputDirectory: public`, no build, `/api/*` functions,
+   `maxDuration: 60`, security headers.
+3. **Environment Variables** → add `OPENAI_API_KEY` and `OPENAI_MODEL=gpt-4o`
+   (do **not** set `PORT` — serverless ignores it).
+4. Deploy → `*.vercel.app` URL. Pushes to `main` auto-deploy; PRs get previews.
+5. To make it publicly reachable, **Settings → Deployment Protection → turn off
+   "Require Log In" (Vercel Authentication)**. On a Pro team this is ON by
+   default and gates every URL behind team login.
+
 - **Redeploy/rollback:** Deployments tab → Promote/Redeploy any deployment.
-- **Logs:** the function's Runtime Logs.
+- **Logs:** Vercel dashboard → the function's Runtime Logs.
+- **Confirm live vs demo:** `GET /api/status` → `{"mode":"live"}`.
 - **Note:** the browser compresses photos to ~1800px JPEG before upload, so
   requests stay well under Vercel's 4.5 MB body limit.
+- **⚠️ Cost/exposure:** with protection off and no app login, anyone with the
+  URL can spend your OpenAI credits — set a spend limit at
+  platform.openai.com/settings/organization/limits.
 
 ### Render (Blueprint)
 
